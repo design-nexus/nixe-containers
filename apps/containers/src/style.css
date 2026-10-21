@@ -1,0 +1,139 @@
+window.containers-window entry {
+  min-height: 32px;
+  border-radius: 6px;
+  background: alpha(@theme_bg, 0.65);
+  border: 1px solid alpha(@theme_border, 0.8);
+  box-shadow: none;
+  color: @theme_text;
+  padding: 0 8px;
+}
+
+window.containers-window entry text {
+  background: transparent;
+  color: @theme_text;
+}
+
+window.containers-window entry:focus-within {
+  border-color: @theme_accent;
+}
+
+.workload-header,
+.workload-row {
+  padding: 5px 10px;
+}
+
+.workload-header {
+  color: @theme_dim_text;
+}
+
+.workload-row:hover {
+  background: @row_hover;
+}
+
+.col-name { min-width: 120px; }
+.col-host { min-width: 64px; }
+.col-engine { min-width: 64px; }
+.col-type { min-width: 88px; }
+.col-status { min-width: 72px; }
+.col-actions { min-width: 96px; }
+
+.page-toolbar {
+  padding: 8px 12px 0;
+}
+
+.workload-row button.icon-button {
+  min-width: 28px;
+  padding: 0 4px;
+}
+
+.later-page {
+  padding: 24px;
+}
+
+.overview-page {
+  padding: 16px 20px 24px;
+}
+
+.host-panel {
+  margin-bottom: 20px;
+}
+
+.host-panel-title {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.engine-chip {
+  padding: 6px 0;
+}
+
+.metric-tile {
+  padding: 10px 12px;
+  border: 1px solid alpha(@theme_border, 0.8);
+  min-width: 140px;
+}
+
+.metric-label {
+  color: @theme_dim_text;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.metric-value {
+  font-size: 16px;
+}
+
+.metric-tile progressbar trough {
+  min-height: 4px;
+  background: alpha(@theme_muted, 0.8);
+}
+
+.metric-tile progressbar progress {
+  min-height: 4px;
+  background: @theme_accent;
+}
+
+.running-head {
+  color: @theme_dim_text;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 8px 0 4px;
+}
+
+.running-row {
+  padding: 6px 0;
+}
+
+.running-row:hover {
+  background: @row_hover;
+}
+
+.status-dot {
+  min-width: 8px;
+  min-height: 8px;
+  border-radius: 8px;
+  background: @theme_muted;
+  margin-right: 4px;
+}
+
+.status-dot.ok {
+  background: @theme_accent;
+}
+
+.status-dot.danger {
+  background: @theme_danger;
+}
+
+.logs-view,
+.session-term {
+  background: @theme_bg;
+  color: @theme_text;
+  font-family: "JetBrains Mono", monospace;
+}
+
+window.containers-window .session-term scrollbar,
+window.containers-window .logs-view scrollbar {
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+}

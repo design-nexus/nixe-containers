@@ -1,0 +1,23 @@
+{
+  "application": "containers",
+  "directory": "containers",
+  "packages": [
+    "nixe-containers"
+  ],
+  "manifest": "Cargo.toml",
+  "prepare": [],
+  "binaries": [
+    "nixe-containers"
+  ],
+  "test_commands": [
+    [
+      "cargo",
+      "test",
+      "--locked",
+      "-p",
+      "nixe-containers",
+      "--bin",
+      "nixe-containers"
+    ]
+  ]
+}

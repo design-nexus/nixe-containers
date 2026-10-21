@@ -1,0 +1,42 @@
+[package]
+name = "nixe-containers"
+version = "0.1.0"
+description = "Manage Incus and Docker containers and virtual machines"
+license = "MIT"
+repository = "https://github.com/design-nexus/nixe-containers"
+authors = ["Ken Smith"]
+edition = "2024"
+
+[[bin]]
+name = "nixe-containers"
+path = "src/main.rs"
+
+[dependencies]
+nixe-core = { git = "https://github.com/design-nexus/nixe-core.git", rev = "7cd0be5d09cd1d91510794f58bbc720605951c12" }
+nixe-ui = { git = "https://github.com/design-nexus/nixe-design.git", rev = "609c1d2a5af41a8ee3b76ba23611eb30d95a4743" }
+nixe-theme = { git = "https://github.com/design-nexus/nixe-design.git", rev = "609c1d2a5af41a8ee3b76ba23611eb30d95a4743" }
+anyhow = "1.0.104"
+async-channel = "2"
+base64 = "0.22"
+bollard = { version = "0.21", features = ["pipe", "ssh"] }
+bytes = "1"
+futures-util = "0.3"
+gtk = { version = "0.11", package = "gtk4", features = ["v4_18"] }
+http-body-util = "0.1"
+hyper = { version = "1", features = ["http1", "client"] }
+hyper-util = { version = "0.1", features = ["client", "client-legacy", "http1", "tokio"] }
+hyperlocal = "0.9"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rustls = { version = "0.23", default-features = false, features = ["std", "tls12", "ring"] }
+rustls-pemfile = "2"
+rustls-pki-types = "1"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.10"
+thiserror = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "macros", "sync", "io-util"] }
+tokio-tungstenite = { version = "0.26", default-features = false, features = ["connect", "rustls-tls-native-roots"] }
+toml = "1.1.6"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+vte4 = { version = "0.10", features = ["v0_80"] }
