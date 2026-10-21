@@ -12,7 +12,7 @@ die() { printf '\033[31m==>\033[0m %s\n' "$*" >&2; exit 1; }
 app_info() {
   dir=$1 pkg="nixe-$1" bins="nixe-$1" deps="" ids=""
   case $1 in
-    containers) ids="Containers" deps="gtk4 vte4 pkgconf gcc git curl" ;;
+    containers) ids="Containers" deps="gtk4 vte4 gtksourceview5 pkgconf gcc git curl" ;;
     *) return 1 ;;
   esac
 }

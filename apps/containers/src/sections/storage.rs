@@ -1,53 +1,51 @@
 use crate::models::{Engine, HostFilter, HostId, Snapshot, VolumeRow, VolumeSpec};
-use crate::widgets::{self, Page};
+use crate::widgets::{self, Col, OpsTable, Page};
 use crate::{prefs, window, worker};
 use gtk::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 struct List {
-    rows: gtk::Box,
-    empty: gtk::Box,
+    table: OpsTable,
+    count: gtk::Label,
 }
 
 thread_local! {
     static UI: RefCell<Option<Rc<List>>> = const { RefCell::new(None) };
 }
 
+fn cols() -> [Col; 6] {
+    [
+        widgets::col("name", "Name", true, false, 0),
+        widgets::col("host", "Host", false, false, 88),
+        widgets::col("engine", "Engine", false, false, 80),
+        widgets::col("pool", "Pool / driver", false, false, 140),
+        widgets::col("size", "Size", false, true, 88),
+        widgets::col("actions", "", false, true, 48),
+    ]
+}
+
 pub fn build(page: &Page) {
     page.fill();
-    let bar = widgets::hbox(8);
-    bar.add_css_class("page-toolbar");
-    let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    spacer.set_hexpand(true);
-    bar.append(&spacer);
+    let (bar, count, actions) = widgets::page_header("Storage");
     let create = gtk::Button::with_label("Create");
     create.add_css_class("suggested-action");
     create.connect_clicked(|_| open_create());
-    bar.append(&create);
+    actions.append(&create);
     page.body.append(&bar);
-    let header = row(["Name", "Host", "Engine", "Pool / driver", "Size"], true);
-    header.add_css_class("workload-header");
-    page.body.append(&header);
-    let rows = widgets::vbox(0);
-    rows.set_vexpand(true);
-    let empty = widgets::empty_state(
+    let table = OpsTable::new(
+        &cols(),
         "drive-harddisk-symbolic",
         "No volumes",
         "Nothing matches this host filter. Create a volume to add one.",
-        None,
     );
-    empty.set_visible(false);
-    page.body.append(&rows);
-    page.body.append(&empty);
-    UI.with(|u| *u.borrow_mut() = Some(Rc::new(List { rows, empty })));
+    page.body.append(&table.root);
+    UI.with(|u| *u.borrow_mut() = Some(Rc::new(List { table, count })));
 }
 
 pub fn refresh(snapshot: &Snapshot, host: HostFilter, query: &str) {
     let Some(list) = UI.with(|u| u.borrow().clone()) else { return };
-    while let Some(c) = list.rows.first_child() {
-        list.rows.remove(&c);
-    }
+    list.table.clear();
     let q = query.trim().to_ascii_lowercase();
     let mut shown = 0;
     for vol in snapshot.volumes(host) {
@@ -59,28 +57,22 @@ pub fn refresh(snapshot: &Snapshot, host: HostFilter, query: &str) {
         {
             continue;
         }
-        list.rows.append(&vol_row(vol));
+        let row = list.table.push(vol_cells(vol));
+        row.set_tooltip_text(Some(&format!("{} attached", vol.used_by)));
         shown += 1;
     }
-    list.rows.set_visible(shown > 0);
-    list.empty.set_visible(shown == 0);
+    list.table.set_count(shown);
+    widgets::set_count(&list.count, shown, "volume");
 }
 
-fn vol_row(vol: &VolumeRow) -> gtk::Box {
+fn vol_cells(vol: &VolumeRow) -> Vec<gtk::Widget> {
     let pool = match (&vol.pool, vol.kind.as_str()) {
         (Some(p), kind) => format!("{p} · {kind}"),
         (None, kind) => kind.to_string(),
     };
-    let root = row([&vol.name, &window::host_name(vol.host), vol.engine.label(), &pool, &vol.size_label], false);
-    root.add_css_class("workload-row");
-    root.set_tooltip_text(Some(&format!("{} attached", vol.used_by)));
-    let actions = widgets::hbox(4);
-    actions.add_css_class("col-actions");
+    let actions = widgets::actions_cell();
     if vol.removable {
-        let del = gtk::Button::from_icon_name("user-trash-symbolic");
-        del.add_css_class("flat");
-        del.add_css_class("icon-button");
-        del.set_tooltip_text(Some("Remove"));
+        let del = widgets::icon_button("user-trash-symbolic", "Remove");
         let (host, engine, name, pool) = (vol.host, vol.engine, vol.name.clone(), vol.pool.clone());
         let host_label = window::host_name(host);
         del.connect_clicked(move |_| {
@@ -93,8 +85,14 @@ fn vol_row(vol: &VolumeRow) -> gtk::Box {
         });
         actions.append(&del);
     }
-    root.append(&actions);
-    root
+    vec![
+        widgets::td(&vol.name),
+        widgets::td_dim(&window::host_name(vol.host)),
+        widgets::td_dim(vol.engine.label()),
+        widgets::td_dim(&pool),
+        widgets::td_dim(&vol.size_label),
+        actions.upcast(),
+    ]
 }
 
 fn open_create() {
@@ -165,17 +163,3 @@ fn open_create() {
     dialog.present();
 }
 
-fn row(cols: [&str; 5], header: bool) -> gtk::Box {
-    let b = widgets::hbox(12);
-    let classes = ["col-name", "col-host", "col-engine", "col-type", "col-status"];
-    for (i, text) in cols.iter().enumerate() {
-        let l = widgets::label(text, if header { "dim" } else { "" });
-        l.add_css_class(classes[i]);
-        l.set_ellipsize(gtk::pango::EllipsizeMode::End);
-        if i == 0 {
-            l.set_hexpand(true);
-        }
-        b.append(&l);
-    }
-    b
-}

@@ -144,7 +144,14 @@ async fn list(docker: &Docker, host: HostId) -> Result<(String, Vec<Workload>), 
                 .unwrap_or_else(|| "unnamed".into());
             let status = c.status.clone().unwrap_or_else(|| c.state.map(|s| s.to_string()).unwrap_or_else(|| "unknown".into()));
             let id = c.id.clone().unwrap_or_else(|| name.clone());
-            let project = c.labels.as_ref().and_then(|l| l.get("com.docker.compose.project").cloned()).filter(|s| !s.is_empty());
+            let labels = c.labels.as_ref();
+            let project = labels.and_then(|l| l.get("com.docker.compose.project")).cloned().filter(|s| !s.is_empty());
+            let project_dir =
+                labels.and_then(|l| l.get("com.docker.compose.project.working_dir")).cloned().filter(|s| !s.is_empty());
+            let compose_file = crate::models::compose_file_from_labels(
+                project_dir.as_deref(),
+                labels.and_then(|l| l.get("com.docker.compose.project.config_files")).map(String::as_str),
+            );
             Workload {
                 host,
                 engine: Engine::Docker,
@@ -155,6 +162,8 @@ async fn list(docker: &Docker, host: HostId) -> Result<(String, Vec<Workload>), 
                 status,
                 image: c.image,
                 project,
+                project_dir,
+                compose_file,
             }
         })
         .collect();

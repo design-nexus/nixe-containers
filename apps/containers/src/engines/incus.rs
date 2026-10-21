@@ -260,6 +260,8 @@ fn map_instances(host: HostId, instances: Vec<IncusInstance>) -> Vec<Workload> {
                 status: i.status,
                 image,
                 project: None,
+                project_dir: None,
+                compose_file: None,
             }
         })
         .collect()

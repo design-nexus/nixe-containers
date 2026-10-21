@@ -3,6 +3,7 @@
 pub use nixe_ui::widgets::*;
 
 use gtk::prelude::*;
+use sourceview5::prelude::*;
 
 pub struct Page {
     pub root: gtk::ScrolledWindow,
@@ -11,7 +12,7 @@ pub struct Page {
 
 pub fn page(section: &str) -> Page {
     let body = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    body.add_css_class("settings-page");
+    body.add_css_class("ops-page");
     body.add_css_class(&format!("page-{section}"));
     body.set_hexpand(true);
 
@@ -110,6 +111,266 @@ pub fn sparkline(points: &[f64]) -> gtk::DrawingArea {
         let _ = cr.stroke();
     });
     area
+}
+
+#[derive(Clone, Copy)]
+pub struct Col {
+    pub key: &'static str,
+    pub title: &'static str,
+    pub expand: bool,
+    pub end: bool,
+    pub width: i32,
+}
+
+pub fn col(key: &'static str, title: &'static str, expand: bool, end: bool, width: i32) -> Col {
+    Col { key, title, expand, end, width }
+}
+
+pub struct OpsTable {
+    pub root: gtk::Box,
+    header: gtk::Grid,
+    list: gtk::ListBox,
+    empty: gtk::Box,
+    scroller: gtk::ScrolledWindow,
+    cols: Vec<Col>,
+}
+
+impl OpsTable {
+    pub fn new(cols: &[Col], icon: &str, empty_title: &str, empty_body: &str) -> Self {
+        let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        root.add_css_class("ops-table-wrap");
+        root.set_vexpand(true);
+        let header = make_grid(cols);
+        header.add_css_class("ops-thead");
+        for (i, c) in cols.iter().enumerate() {
+            let l = label(c.title, "ops-th");
+            attach_cell(&header, c, l.upcast_ref(), i as i32);
+        }
+        root.append(&header);
+        let list = gtk::ListBox::new();
+        list.add_css_class("ops-table");
+        list.set_selection_mode(gtk::SelectionMode::Single);
+        list.set_vexpand(true);
+        let empty = empty_state(icon, empty_title, empty_body, None);
+        empty.add_css_class("ops-empty");
+        empty.set_visible(false);
+        let scroller = gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .vexpand(true)
+            .child(&list)
+            .build();
+        empty.set_vexpand(true);
+        root.append(&scroller);
+        root.append(&empty);
+        Self { root, header, list, empty, scroller, cols: cols.to_vec() }
+    }
+
+    pub fn clear(&self) {
+        while let Some(row) = self.list.row_at_index(0) {
+            self.list.remove(&row);
+        }
+    }
+
+    pub fn push(&self, cells: Vec<gtk::Widget>) -> gtk::ListBoxRow {
+        let grid = make_grid(&self.cols);
+        for (i, cell) in cells.into_iter().enumerate() {
+            if let Some(c) = self.cols.get(i) {
+                attach_cell(&grid, c, &cell, i as i32);
+            }
+        }
+        let row = gtk::ListBoxRow::new();
+        row.add_css_class("ops-row");
+        row.set_child(Some(&grid));
+        self.list.append(&row);
+        row
+    }
+
+    pub fn set_count(&self, n: usize) {
+        self.list.set_visible(n > 0);
+        self.scroller.set_visible(n > 0);
+        self.empty.set_visible(n == 0);
+        self.header.set_visible(n > 0);
+    }
+
+    pub fn listbox(&self) -> gtk::ListBox {
+        self.list.clone()
+    }
+}
+
+impl Clone for OpsTable {
+    fn clone(&self) -> Self {
+        Self {
+            root: self.root.clone(),
+            header: self.header.clone(),
+            list: self.list.clone(),
+            empty: self.empty.clone(),
+            scroller: self.scroller.clone(),
+            cols: self.cols.clone(),
+        }
+    }
+}
+
+fn make_grid(cols: &[Col]) -> gtk::Grid {
+    let _ = cols;
+    let grid = gtk::Grid::new();
+    grid.add_css_class("ops-grid");
+    grid.set_column_spacing(0);
+    grid.set_hexpand(true);
+    grid.set_column_homogeneous(false);
+    grid
+}
+
+fn attach_cell(grid: &gtk::Grid, col: &Col, child: &gtk::Widget, left: i32) {
+    child.add_css_class("ops-td");
+    child.add_css_class(&format!("ops-col-{}", col.key));
+    child.set_hexpand(col.expand);
+    if let Some(l) = child.downcast_ref::<gtk::Label>() {
+        l.set_xalign(if col.end { 1.0 } else { 0.0 });
+        l.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    }
+    if col.width > 0 {
+        child.set_size_request(col.width, -1);
+    }
+    if col.end {
+        child.set_halign(gtk::Align::End);
+    } else {
+        child.set_halign(gtk::Align::Fill);
+    }
+    grid.attach(child, left, 0, 1, 1);
+}
+
+pub fn page_header(title: &str) -> (gtk::Box, gtk::Label, gtk::Box) {
+    let bar = hbox(12);
+    bar.add_css_class("ops-header");
+    let titles = vbox(0);
+    let t = label(title, "ops-title");
+    t.set_xalign(0.0);
+    let count = label("", "ops-count");
+    count.set_xalign(0.0);
+    titles.append(&t);
+    titles.append(&count);
+    titles.set_hexpand(true);
+    bar.append(&titles);
+    let actions = hbox(8);
+    actions.set_halign(gtk::Align::End);
+    bar.append(&actions);
+    (bar, count, actions)
+}
+
+pub fn icon_button(icon: &str, tip: &str) -> gtk::Button {
+    let b = gtk::Button::from_icon_name(icon);
+    b.add_css_class("flat");
+    b.add_css_class("icon-button");
+    b.set_tooltip_text(Some(tip));
+    b.set_valign(gtk::Align::Center);
+    b
+}
+
+/// GtkSourceView paints from a style scheme, not GTK CSS. Build one from the
+/// live Nixe palette so the editor matches the window.
+pub fn apply_source_scheme(buffer: &sourceview5::Buffer) {
+    let palette = crate::theme::palette();
+    thread_local! {
+        static LAST: std::cell::RefCell<Option<(crate::theme::Palette, sourceview5::StyleScheme)>> =
+            const { std::cell::RefCell::new(None) };
+    }
+    LAST.with(|last| {
+        if let Some((old, scheme)) = last.borrow().as_ref()
+            && old == &palette
+        {
+            buffer.set_style_scheme(Some(scheme));
+            return;
+        }
+        let Some(scheme) = build_source_scheme(&palette) else { return };
+        buffer.set_style_scheme(Some(&scheme));
+        *last.borrow_mut() = Some((palette.clone(), scheme));
+    });
+}
+
+fn build_source_scheme(palette: &crate::theme::Palette) -> Option<sourceview5::StyleScheme> {
+    let directory = crate::paths::cache_dir().join("sourceview");
+    std::fs::create_dir_all(&directory).ok()?;
+    let bg = gtk::glib::markup_escape_text(&palette.bg);
+    let text = gtk::glib::markup_escape_text(&palette.text);
+    let dim = gtk::glib::markup_escape_text(&palette.dim_text);
+    let accent = gtk::glib::markup_escape_text(&palette.accent);
+    let danger = gtk::glib::markup_escape_text(&palette.danger);
+    let highlight = gtk::glib::markup_escape_text(&palette.highlight);
+    let xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<style-scheme id="nixe-containers-yaml" name="Containers" version="1.0">
+  <style name="text" foreground="{text}" background="{bg}"/>
+  <style name="line-numbers" foreground="{dim}" background="{bg}"/>
+  <style name="current-line-number" foreground="{accent}" background="{bg}"/>
+  <style name="current-line" background="{highlight}"/>
+  <style name="selection" foreground="{text}" background="{highlight}"/>
+  <style name="cursor" foreground="{accent}"/>
+  <style name="bracket-match" foreground="{accent}" background="{highlight}"/>
+  <style name="def:comment" foreground="{dim}" italic="true"/>
+  <style name="def:string" foreground="{accent}"/>
+  <style name="def:special-char" foreground="{accent}"/>
+  <style name="def:keyword" foreground="{accent}" bold="true"/>
+  <style name="def:statement" foreground="{text}" bold="true"/>
+  <style name="def:identifier" foreground="{text}"/>
+  <style name="def:decimal" foreground="{accent}"/>
+  <style name="def:floating-point" foreground="{accent}"/>
+  <style name="def:constant" foreground="{accent}"/>
+  <style name="def:boolean" foreground="{accent}"/>
+  <style name="def:type" foreground="{accent}"/>
+  <style name="def:function" foreground="{text}"/>
+  <style name="def:operator" foreground="{dim}"/>
+  <style name="def:preprocessor" foreground="{accent}"/>
+  <style name="def:error" foreground="{danger}"/>
+</style-scheme>
+"#
+    );
+    crate::cmd::atomic_write(&directory.join("nixe-containers-yaml.xml"), xml.as_bytes()).ok()?;
+    let manager = sourceview5::StyleSchemeManager::new();
+    manager.append_search_path(&directory.to_string_lossy());
+    manager.force_rescan();
+    manager.scheme("nixe-containers-yaml")
+}
+
+pub fn status_pill(text: &str, kind: &str) -> gtk::Label {
+    let l = tag(text, kind);
+    l.add_css_class("ops-pill");
+    l
+}
+
+pub fn td(text: &str) -> gtk::Widget {
+    label(text, "").upcast()
+}
+
+pub fn td_dim(text: &str) -> gtk::Widget {
+    label(text, "dim").upcast()
+}
+
+pub fn actions_cell() -> gtk::Box {
+    let b = hbox(2);
+    b.add_css_class("ops-actions");
+    b.set_halign(gtk::Align::End);
+    b
+}
+
+pub fn kv_line(key: &str, value: &str) -> gtk::Box {
+    let row = hbox(8);
+    row.add_css_class("ops-kv");
+    let k = label(key, "ops-kv-key");
+    k.set_xalign(0.0);
+    let v = label(value, "");
+    v.set_xalign(0.0);
+    v.set_hexpand(true);
+    v.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    v.set_selectable(true);
+    row.append(&k);
+    row.append(&v);
+    row
+}
+
+pub fn set_count(label: &gtk::Label, n: usize, noun: &str) {
+    let text = if n == 1 { format!("1 {noun}") } else { format!("{n} {noun}s") };
+    label.set_text(&text);
 }
 
 impl Group {

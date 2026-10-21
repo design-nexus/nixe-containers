@@ -26,14 +26,6 @@ pub enum HostFilter {
 }
 
 impl HostFilter {
-    pub fn id(self) -> &'static str {
-        match self {
-            Self::All => "host-all",
-            Self::Local => "host-local",
-            Self::Remote => "host-remote",
-        }
-    }
-
     pub fn matches(self, host: HostId) -> bool {
         match self {
             Self::All => true,
@@ -146,6 +138,23 @@ pub struct Workload {
     pub state: RunState,
     pub image: Option<String>,
     pub project: Option<String>,
+    pub project_dir: Option<String>,
+    pub compose_file: Option<String>,
+}
+
+pub fn compose_file_from_labels(working_dir: Option<&str>, config_files: Option<&str>) -> Option<String> {
+    let first = config_files?.split(',').map(str::trim).find(|s| !s.is_empty())?;
+    let path = std::path::Path::new(first);
+    if path.is_absolute() {
+        Some(first.to_string())
+    } else {
+        let dir = working_dir?.trim_end_matches('/');
+        if dir.is_empty() {
+            None
+        } else {
+            Some(format!("{dir}/{first}"))
+        }
+    }
 }
 
 impl Workload {
@@ -496,12 +505,20 @@ impl Snapshot {
                 running: 0,
                 total: 0,
                 names: Vec::new(),
+                project_dir: None,
+                compose_file: None,
             });
             slot.total += 1;
             if w.state == RunState::Running {
                 slot.running += 1;
             }
             slot.names.push(w.target_id().to_string());
+            if slot.project_dir.is_none() {
+                slot.project_dir = w.project_dir.clone();
+            }
+            if slot.compose_file.is_none() {
+                slot.compose_file = w.compose_file.clone();
+            }
         }
         map.into_values().collect()
     }
@@ -514,6 +531,8 @@ pub struct Stack {
     pub running: usize,
     pub total: usize,
     pub names: Vec<String>,
+    pub project_dir: Option<String>,
+    pub compose_file: Option<String>,
 }
 
 #[cfg(test)]
@@ -578,6 +597,8 @@ mod tests {
                     state: RunState::Running,
                     image: None,
                     project: Some("app".into()),
+                    project_dir: Some("/srv/app".into()),
+                    compose_file: Some("/srv/app/compose.yaml".into()),
                 },
                 Workload {
                     host: HostId::Local,
@@ -589,6 +610,8 @@ mod tests {
                     state: RunState::Stopped,
                     image: None,
                     project: Some("app".into()),
+                    project_dir: Some("/srv/app".into()),
+                    compose_file: Some("/srv/app/compose.yaml".into()),
                 },
             ],
             ..Snapshot::default()
@@ -598,6 +621,21 @@ mod tests {
         assert_eq!(stacks[0].name, "app");
         assert_eq!(stacks[0].running, 1);
         assert_eq!(stacks[0].total, 2);
+        assert_eq!(stacks[0].project_dir.as_deref(), Some("/srv/app"));
+        assert_eq!(stacks[0].compose_file.as_deref(), Some("/srv/app/compose.yaml"));
+    }
+
+    #[test]
+    fn compose_file_joins_relative_config() {
+        assert_eq!(
+            compose_file_from_labels(Some("/srv/app"), Some("compose.yaml")),
+            Some("/srv/app/compose.yaml".into())
+        );
+        assert_eq!(
+            compose_file_from_labels(Some("/srv/app"), Some("/etc/compose.yaml")),
+            Some("/etc/compose.yaml".into())
+        );
+        assert_eq!(compose_file_from_labels(None, Some("compose.yaml")), None);
     }
 
     #[test]

@@ -1,53 +1,50 @@
 use crate::models::{Engine, HostFilter, HostId, Image, ImageDetail, Snapshot};
-use crate::widgets::{self, Page};
+use crate::widgets::{self, Col, OpsTable, Page};
 use crate::{prefs, window, worker};
 use gtk::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 struct List {
-    rows: gtk::Box,
-    empty: gtk::Box,
+    table: OpsTable,
+    count: gtk::Label,
 }
 
 thread_local! {
     static UI: RefCell<Option<Rc<List>>> = const { RefCell::new(None) };
 }
 
+fn cols() -> [Col; 5] {
+    [
+        widgets::col("name", "Name", true, false, 0),
+        widgets::col("host", "Host", false, false, 88),
+        widgets::col("engine", "Engine", false, false, 80),
+        widgets::col("size", "Size", false, true, 88),
+        widgets::col("actions", "", false, true, 72),
+    ]
+}
+
 pub fn build(page: &Page) {
     page.fill();
-    let bar = widgets::hbox(8);
-    bar.add_css_class("page-toolbar");
-    let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    spacer.set_hexpand(true);
-    bar.append(&spacer);
+    let (bar, count, actions) = widgets::page_header("Images");
     let pull = gtk::Button::with_label("Pull");
     pull.add_css_class("suggested-action");
     pull.connect_clicked(|_| open_pull());
-    bar.append(&pull);
+    actions.append(&pull);
     page.body.append(&bar);
-    let header = row(["Name", "Host", "Engine", "Size"], true);
-    header.add_css_class("workload-header");
-    page.body.append(&header);
-    let rows = widgets::vbox(0);
-    rows.set_vexpand(true);
-    let empty = widgets::empty_state(
+    let table = OpsTable::new(
+        &cols(),
         "media-optical-symbolic",
         "No images",
         "Nothing matches this host filter. Pull an image to add one.",
-        None,
     );
-    empty.set_visible(false);
-    page.body.append(&rows);
-    page.body.append(&empty);
-    UI.with(|u| *u.borrow_mut() = Some(Rc::new(List { rows, empty })));
+    page.body.append(&table.root);
+    UI.with(|u| *u.borrow_mut() = Some(Rc::new(List { table, count })));
 }
 
 pub fn refresh(snapshot: &Snapshot, host: HostFilter, query: &str) {
     let Some(list) = UI.with(|u| u.borrow().clone()) else { return };
-    while let Some(c) = list.rows.first_child() {
-        list.rows.remove(&c);
-    }
+    list.table.clear();
     let q = query.trim().to_ascii_lowercase();
     let mut shown = 0;
     for img in snapshot.images(host) {
@@ -58,28 +55,19 @@ pub fn refresh(snapshot: &Snapshot, host: HostFilter, query: &str) {
         {
             continue;
         }
-        list.rows.append(&image_row(img));
+        list.table.push(image_cells(img));
         shown += 1;
     }
-    list.rows.set_visible(shown > 0);
-    list.empty.set_visible(shown == 0);
+    list.table.set_count(shown);
+    widgets::set_count(&list.count, shown, "image");
 }
 
-fn image_row(img: &Image) -> gtk::Box {
-    let root = row([&img.name, &window::host_name(img.host), img.engine.label(), &crate::models::format_bytes(img.size)], false);
-    root.add_css_class("workload-row");
-    let actions = widgets::hbox(4);
-    actions.add_css_class("col-actions");
-    let inspect = gtk::Button::from_icon_name("dialog-information-symbolic");
-    inspect.add_css_class("flat");
-    inspect.add_css_class("icon-button");
-    inspect.set_tooltip_text(Some("Inspect"));
+fn image_cells(img: &Image) -> Vec<gtk::Widget> {
+    let actions = widgets::actions_cell();
+    let inspect = widgets::icon_button("dialog-information-symbolic", "Inspect");
     let (host, engine, id) = (img.host, img.engine, img.id.clone());
     inspect.connect_clicked(move |_| worker::inspect_image(host, engine, id.clone()));
-    let del = gtk::Button::from_icon_name("user-trash-symbolic");
-    del.add_css_class("flat");
-    del.add_css_class("icon-button");
-    del.set_tooltip_text(Some("Remove"));
+    let del = widgets::icon_button("user-trash-symbolic", "Remove");
     let (host, engine, id, name) = (img.host, img.engine, img.id.clone(), img.name.clone());
     let host_label = window::host_name(host);
     del.connect_clicked(move |_| {
@@ -92,8 +80,13 @@ fn image_row(img: &Image) -> gtk::Box {
     });
     actions.append(&inspect);
     actions.append(&del);
-    root.append(&actions);
-    root
+    vec![
+        widgets::td(&img.name),
+        widgets::td_dim(&window::host_name(img.host)),
+        widgets::td_dim(img.engine.label()),
+        widgets::td_dim(&crate::models::format_bytes(img.size)),
+        actions.upcast(),
+    ]
 }
 
 pub fn show_detail(detail: ImageDetail) {
@@ -177,17 +170,3 @@ fn open_pull() {
     dialog.present();
 }
 
-fn row(cols: [&str; 4], header: bool) -> gtk::Box {
-    let b = widgets::hbox(12);
-    let classes = ["col-name", "col-host", "col-engine", "col-status"];
-    for (i, text) in cols.iter().enumerate() {
-        let l = widgets::label(text, if header { "dim" } else { "" });
-        l.add_css_class(classes[i]);
-        l.set_ellipsize(gtk::pango::EllipsizeMode::End);
-        if i == 0 {
-            l.set_hexpand(true);
-        }
-        b.append(&l);
-    }
-    b
-}

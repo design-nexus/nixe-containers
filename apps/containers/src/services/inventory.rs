@@ -106,6 +106,8 @@ mod tests {
             state: RunState::Running,
             image: None,
             project: None,
+            project_dir: None,
+            compose_file: None,
         });
         snapshot.workloads.push(Workload {
             host: HostId::Local,
@@ -117,6 +119,8 @@ mod tests {
             state: RunState::Stopped,
             image: None,
             project: None,
+            project_dir: None,
+            compose_file: None,
         });
         snapshot.workloads.sort_by_key(|a| a.name.to_ascii_lowercase());
         assert_eq!(snapshot.workloads[0].name, "alpha");

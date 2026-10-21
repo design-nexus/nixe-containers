@@ -3,7 +3,7 @@
 
 use crate::models::{Action, CheckId, CreateSpec, Engine, HostId, NetSpec, SnapAction, TermEvent, TermKind, VolumeSpec};
 use crate::prefs::RemoteProfile;
-use crate::services::{connections, diagnose, host, inventory, ops};
+use crate::services::{compose, connections, diagnose, host, inventory, ops};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 use tokio::sync::{mpsc, watch};
@@ -20,6 +20,7 @@ pub enum Job {
     RemoveImage { host: HostId, engine: Engine, id: String },
     FollowLogs { host: HostId, engine: Engine, names: Vec<String>, seq: u64, follow: bool },
     StackOp { host: HostId, names: Vec<String>, action: Action },
+    Compose { host: HostId, project: String, dir: String, file: String, action: Action },
     StopLogs { seq: u64 },
     StartTerm { host: HostId, engine: Engine, name: String, seq: u64, kind: TermKind },
     TermInput { seq: u64, data: Vec<u8> },
@@ -76,6 +77,9 @@ pub fn start() {
                                 spawn_logs(&live, host, engine, names, seq, follow);
                             }
                             Some(Job::StackOp { host, names, action }) => stack_now(host, names, action).await,
+                            Some(Job::Compose { host, project, dir, file, action }) => {
+                                compose_now(host, project, dir, file, action).await
+                            }
                             Some(Job::StopLogs { seq }) => stop_watch(&live, seq, true),
                             Some(Job::StartTerm { host, engine, name, seq, kind }) => {
                                 spawn_term(&live, host, engine, name, seq, kind);
@@ -156,6 +160,10 @@ pub fn follow_logs(host: HostId, engine: Engine, names: Vec<String>, seq: u64, f
 
 pub fn stack_op(host: HostId, names: Vec<String>, action: Action) {
     send(Job::StackOp { host, names, action });
+}
+
+pub fn compose(host: HostId, project: impl Into<String>, dir: impl Into<String>, file: impl Into<String>, action: Action) {
+    send(Job::Compose { host, project: project.into(), dir: dir.into(), file: file.into(), action });
 }
 
 pub fn stop_logs(seq: u64) {
@@ -360,6 +368,11 @@ fn spawn_logs(live: &Arc<Mutex<Live>>, host: HostId, engine: Engine, names: Vec<
         let (_, result) = tokio::join!(pump, work);
         on_main(move || crate::window::apply_log_done(seq, result));
     });
+}
+
+async fn compose_now(host: HostId, project: String, dir: String, file: String, action: Action) {
+    let result = compose::run(host, &project, &dir, &file, action).await;
+    on_main(move || crate::window::apply_op(result));
 }
 
 async fn stack_now(host: HostId, names: Vec<String>, action: Action) {

@@ -29,6 +29,7 @@ thread_local! {
 }
 
 pub fn build(page: &Page) {
+    page.body.add_css_class("settings-page");
     let g = page.group("This computer");
     g.note("Engines are detected automatically. Use Diagnostics if a daemon is down or this user lacks a group.");
     let local = widgets::vbox(0);

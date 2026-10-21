@@ -22,6 +22,9 @@ struct Ui {
     sections: Vec<Section>,
     current: String,
     host: HostFilter,
+    host_all: gtk::ToggleButton,
+    host_local: gtk::ToggleButton,
+    host_remote: gtk::ToggleButton,
     overlay: gtk::Overlay,
     readout: gtk::Label,
     snapshot: Snapshot,
@@ -58,6 +61,10 @@ pub fn present(app: &gtk::Application, section: Option<&str>) {
     install_icons();
     build(app);
     let start = section.map(String::from).unwrap_or_else(|| nixe_theme::start_page("overview", &prefs::get().last_section));
+    let start = match start.as_str() {
+        "host-all" | "host-local" | "host-remote" => "overview".to_string(),
+        _ => start,
+    };
     navigate(&start);
     if prefs::take_broken() {
         toast("Your settings file couldn't be read, so defaults are in use. The old file is kept as settings.toml.bak.");
@@ -150,7 +157,7 @@ fn build(app: &gtk::Application) {
     nav.append(&nav_scroll);
 
     let stack = gtk::Stack::new();
-    stack.add_css_class("settings-content");
+    stack.add_css_class("ops-stack");
     stack.set_hexpand(true);
     stack.set_vexpand(true);
     stack.set_transition_type(gtk::StackTransitionType::Crossfade);
@@ -160,18 +167,23 @@ fn build(app: &gtk::Application) {
     if let Some(find) = &head.search {
         let s = search.clone();
         find.connect_clicked(move |_| {
-            if s.is_visible() && s.text().is_empty() {
-                s.set_visible(false);
-            } else {
-                s.set_visible(true);
-                s.grab_focus();
-            }
+            s.grab_focus();
         });
     }
+    let (host_bar, host_all, host_local, host_remote) = host_segment();
+    let chrome_bar = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    chrome_bar.add_css_class("ops-chrome-bar");
+    chrome_bar.append(&host_bar);
+    let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    spacer.set_hexpand(true);
+    chrome_bar.append(&spacer);
+    search.set_hexpand(false);
+    search.set_width_chars(18);
+    chrome_bar.append(&search);
     let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     content.set_hexpand(true);
-    content.add_css_class("settings-content");
-    content.append(&chrome::search_strip(&search));
+    content.add_css_class("ops-chrome");
+    content.append(&chrome_bar);
     content.append(&stack);
 
     let body = gtk::Box::new(gtk::Orientation::Horizontal, 0);
@@ -237,6 +249,9 @@ fn build(app: &gtk::Application) {
         sections,
         current: String::new(),
         host: HostFilter::All,
+        host_all,
+        host_local,
+        host_remote,
         overlay,
         readout,
         snapshot: Snapshot::default(),
@@ -247,13 +262,68 @@ fn build(app: &gtk::Application) {
 fn search_entry() -> gtk::SearchEntry {
     let search = gtk::SearchEntry::new();
     search.set_placeholder_text(Some("Search"));
-    search.set_visible(false);
+    search.add_css_class("ops-search");
     search.connect_search_changed(|_| paint_lists());
     search.connect_stop_search(|e| {
         e.set_text("");
-        e.set_visible(false);
     });
     search
+}
+
+fn host_segment() -> (gtk::Box, gtk::ToggleButton, gtk::ToggleButton, gtk::ToggleButton) {
+    let bx = widgets::hbox(0);
+    bx.add_css_class("segmented");
+    bx.add_css_class("host-segment");
+    let mk = |filter: HostFilter, title: &str| {
+        let b = gtk::ToggleButton::with_label(title);
+        b.add_css_class("segment");
+        b.connect_toggled(move |b| {
+            if b.is_active() {
+                set_host(filter);
+            }
+        });
+        b
+    };
+    let all = mk(HostFilter::All, "All");
+    let local = mk(HostFilter::Local, "Local");
+    let remote = mk(HostFilter::Remote, "Remote");
+    local.set_group(Some(&all));
+    remote.set_group(Some(&all));
+    all.set_active(true);
+    remote.set_sensitive(prefs::get().remote.configured());
+    remote.set_tooltip_text(Some("The configured remote server"));
+    bx.append(&all);
+    bx.append(&local);
+    bx.append(&remote);
+    (bx, all, local, remote)
+}
+
+pub fn set_host(filter: HostFilter) {
+    let Some(ui) = ui() else { return };
+    let current = ui.borrow().host;
+    if current == filter {
+        return;
+    }
+    if filter == HostFilter::Remote && !crate::services::connections::remote_ready(&prefs::get().remote) {
+        toast("Add a remote on Connections.");
+        match current {
+            HostFilter::All => ui.borrow().host_all.set_active(true),
+            HostFilter::Local => ui.borrow().host_local.set_active(true),
+            HostFilter::Remote => {}
+        }
+        show_page("connections");
+        return;
+    }
+    {
+        let mut u = ui.borrow_mut();
+        u.host = filter;
+        match filter {
+            HostFilter::All => u.host_all.set_active(true),
+            HostFilter::Local => u.host_local.set_active(true),
+            HostFilter::Remote => u.host_remote.set_active(true),
+        }
+    }
+    paint_lists();
 }
 
 fn status_bar() -> (gtk::Box, gtk::Label) {
@@ -338,7 +408,6 @@ fn install_keys(window: &gtk::ApplicationWindow, search: &gtk::SearchEntry) {
         }
         match key {
             gdk::Key::f if ctrl => {
-                s2.set_visible(true);
                 s2.grab_focus();
                 done
             }
@@ -362,9 +431,8 @@ fn install_keys(window: &gtk::ApplicationWindow, search: &gtk::SearchEntry) {
                 worker::refresh();
                 done
             }
-            gdk::Key::Escape if s2.is_visible() => {
+            gdk::Key::Escape if !s2.text().is_empty() => {
                 s2.set_text("");
-                s2.set_visible(false);
                 done
             }
             _ => glib::Propagation::Proceed,
@@ -374,25 +442,6 @@ fn install_keys(window: &gtk::ApplicationWindow, search: &gtk::SearchEntry) {
 }
 
 pub fn navigate(id: &str) {
-    let Some(ui) = ui() else { return };
-    let host = match id {
-        "host-all" => Some(HostFilter::All),
-        "host-local" => Some(HostFilter::Local),
-        "host-remote" => Some(HostFilter::Remote),
-        _ => None,
-    };
-    if let Some(filter) = host {
-        ui.borrow_mut().host = filter;
-        highlight_nav(&ui);
-        paint_lists();
-        if filter == HostFilter::Remote
-            && !crate::services::connections::remote_ready(&prefs::get().remote)
-            && ui.borrow().current != "connections"
-        {
-            show_page("connections");
-        }
-        return;
-    }
     show_page(id);
 }
 
@@ -424,10 +473,8 @@ fn show_page(id: &str) {
 
 fn highlight_nav(ui: &Rc<RefCell<Ui>>) {
     let u = ui.borrow();
-    let host_id = u.host.id();
     for (id, button) in &u.nav_items {
-        let on = id == &u.current || id == host_id;
-        if on {
+        if id == &u.current {
             button.add_css_class("active");
         } else {
             button.remove_css_class("active");
@@ -505,6 +552,12 @@ pub fn apply_snapshot(snapshot: Snapshot) {
         let connected = snapshot.engines.iter().filter(|e| e.is_connected()).count();
         u.readout.set_text(&format!("{running} running · {stopped} stopped · {connected} engines connected"));
         u.snapshot = snapshot;
+        let remote_ok = crate::services::connections::remote_ready(&prefs::get().remote);
+        u.host_remote.set_sensitive(remote_ok);
+        if !remote_ok && u.host == HostFilter::Remote {
+            u.host = HostFilter::All;
+            u.host_all.set_active(true);
+        }
     }
     paint_lists();
 }

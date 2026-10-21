@@ -1,53 +1,51 @@
 use crate::models::{Engine, HostFilter, HostId, NetRow, NetSpec, Snapshot};
-use crate::widgets::{self, Page};
+use crate::widgets::{self, Col, OpsTable, Page};
 use crate::{prefs, window, worker};
 use gtk::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 struct List {
-    rows: gtk::Box,
-    empty: gtk::Box,
+    table: OpsTable,
+    count: gtk::Label,
 }
 
 thread_local! {
     static UI: RefCell<Option<Rc<List>>> = const { RefCell::new(None) };
 }
 
+fn cols() -> [Col; 6] {
+    [
+        widgets::col("name", "Name", true, false, 0),
+        widgets::col("host", "Host", false, false, 88),
+        widgets::col("engine", "Engine", false, false, 80),
+        widgets::col("driver", "Driver", false, false, 96),
+        widgets::col("subnet", "Subnet", false, true, 140),
+        widgets::col("actions", "", false, true, 48),
+    ]
+}
+
 pub fn build(page: &Page) {
     page.fill();
-    let bar = widgets::hbox(8);
-    bar.add_css_class("page-toolbar");
-    let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    spacer.set_hexpand(true);
-    bar.append(&spacer);
+    let (bar, count, actions) = widgets::page_header("Networks");
     let create = gtk::Button::with_label("Create");
     create.add_css_class("suggested-action");
     create.connect_clicked(|_| open_create());
-    bar.append(&create);
+    actions.append(&create);
     page.body.append(&bar);
-    let header = row(["Name", "Host", "Engine", "Driver", "Subnet"], true);
-    header.add_css_class("workload-header");
-    page.body.append(&header);
-    let rows = widgets::vbox(0);
-    rows.set_vexpand(true);
-    let empty = widgets::empty_state(
+    let table = OpsTable::new(
+        &cols(),
         "network-wired-symbolic",
         "No networks",
         "Nothing matches this host filter. Create a bridge network to add one.",
-        None,
     );
-    empty.set_visible(false);
-    page.body.append(&rows);
-    page.body.append(&empty);
-    UI.with(|u| *u.borrow_mut() = Some(Rc::new(List { rows, empty })));
+    page.body.append(&table.root);
+    UI.with(|u| *u.borrow_mut() = Some(Rc::new(List { table, count })));
 }
 
 pub fn refresh(snapshot: &Snapshot, host: HostFilter, query: &str) {
     let Some(list) = UI.with(|u| u.borrow().clone()) else { return };
-    while let Some(c) = list.rows.first_child() {
-        list.rows.remove(&c);
-    }
+    list.table.clear();
     let q = query.trim().to_ascii_lowercase();
     let mut shown = 0;
     for net in snapshot.networks(host) {
@@ -58,25 +56,19 @@ pub fn refresh(snapshot: &Snapshot, host: HostFilter, query: &str) {
         {
             continue;
         }
-        list.rows.append(&net_row(net));
+        let row = list.table.push(net_cells(net));
+        row.set_tooltip_text(Some(&format!("{} attached", net.used_by)));
         shown += 1;
     }
-    list.rows.set_visible(shown > 0);
-    list.empty.set_visible(shown == 0);
+    list.table.set_count(shown);
+    widgets::set_count(&list.count, shown, "network");
 }
 
-fn net_row(net: &NetRow) -> gtk::Box {
+fn net_cells(net: &NetRow) -> Vec<gtk::Widget> {
     let subnet = net.subnet.as_deref().unwrap_or("—");
-    let root = row([&net.name, &window::host_name(net.host), net.engine.label(), &net.driver, subnet], false);
-    root.add_css_class("workload-row");
-    root.set_tooltip_text(Some(&format!("{} attached", net.used_by)));
-    let actions = widgets::hbox(4);
-    actions.add_css_class("col-actions");
+    let actions = widgets::actions_cell();
     if net.removable {
-        let del = gtk::Button::from_icon_name("user-trash-symbolic");
-        del.add_css_class("flat");
-        del.add_css_class("icon-button");
-        del.set_tooltip_text(Some("Remove"));
+        let del = widgets::icon_button("user-trash-symbolic", "Remove");
         let (host, engine, name) = (net.host, net.engine, net.name.clone());
         let host_label = window::host_name(host);
         del.connect_clicked(move |_| {
@@ -89,8 +81,14 @@ fn net_row(net: &NetRow) -> gtk::Box {
         });
         actions.append(&del);
     }
-    root.append(&actions);
-    root
+    vec![
+        widgets::td(&net.name),
+        widgets::td_dim(&window::host_name(net.host)),
+        widgets::td_dim(net.engine.label()),
+        widgets::td_dim(&net.driver),
+        widgets::td_dim(subnet),
+        actions.upcast(),
+    ]
 }
 
 fn open_create() {
@@ -159,17 +157,3 @@ fn open_create() {
     dialog.present();
 }
 
-fn row(cols: [&str; 5], header: bool) -> gtk::Box {
-    let b = widgets::hbox(12);
-    let classes = ["col-name", "col-host", "col-engine", "col-type", "col-status"];
-    for (i, text) in cols.iter().enumerate() {
-        let l = widgets::label(text, if header { "dim" } else { "" });
-        l.add_css_class(classes[i]);
-        l.set_ellipsize(gtk::pango::EllipsizeMode::End);
-        if i == 0 {
-            l.set_hexpand(true);
-        }
-        b.append(&l);
-    }
-    b
-}

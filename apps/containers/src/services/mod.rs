@@ -1,3 +1,4 @@
+pub mod compose;
 pub mod connections;
 pub mod credentials;
 pub mod diagnose;
