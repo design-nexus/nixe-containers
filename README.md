@@ -24,9 +24,11 @@ server. No agent, no web UI.
 
 ## Install
 
+```sh
+curl -fsSL https://raw.githubusercontent.com/design-nexus/nixe-containers/main/install.sh | bash
 ```
-./install.sh
-```
+
+From a checkout, `./install.sh` does the same.
 
 Asks for sudo when Docker, Incus, or VTE is missing. Installs those packages,
 adds your user to `docker`, `incus-admin`, and `incus`, starts the daemons, and
