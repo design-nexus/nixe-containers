@@ -1,4 +1,4 @@
-//! The main window: host filter and manage pages in a Nixe sidebar.
+//! The main window: host filter and manage pages in a Nyx sidebar.
 
 use crate::models::{
     DiagReport, HostFilter, HostHealth, HostId, ImageDetail, InstanceSnap, LogChunk, ResourceSample, Snapshot, WorkloadDetail,
@@ -7,7 +7,7 @@ use crate::sections::{self, Section};
 use crate::{prefs, settings_dialog, theme, widgets, worker};
 use gtk::prelude::*;
 use gtk::{gdk, glib};
-use nixe_ui::chrome;
+use nyx_ui::chrome;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -60,7 +60,7 @@ pub fn present(app: &gtk::Application, section: Option<&str>) {
     theme::install();
     install_icons();
     build(app);
-    let start = section.map(String::from).unwrap_or_else(|| nixe_theme::start_page("overview", &prefs::get().last_section));
+    let start = section.map(String::from).unwrap_or_else(|| nyx_theme::start_page("overview", &prefs::get().last_section));
     let start = match start.as_str() {
         "host-all" | "host-local" | "host-remote" => "overview".to_string(),
         _ => start,
@@ -77,8 +77,8 @@ pub fn present(app: &gtk::Application, section: Option<&str>) {
 
 fn install_icons() {
     const ICONS: &[(&str, &str)] = &[(
-        "io.github.design_nexus.nixe.Containers.svg",
-        include_str!("../data/icons/io.github.design_nexus.nixe.Containers.svg"),
+        "io.github.design_nexus.nyx.Containers.svg",
+        include_str!("../data/icons/io.github.design_nexus.nyx.Containers.svg"),
     )];
     let dir = crate::paths::cache_dir().join("icons");
     for (name, svg) in ICONS {
@@ -111,11 +111,11 @@ fn build(app: &gtk::Application) {
         gtk::ApplicationWindow::builder().application(app).title("Containers").default_width(1120).default_height(800).build();
     window.add_css_class("containers-window");
     window.set_titlebar(Some(&gtk::Box::new(gtk::Orientation::Horizontal, 0)));
-    nixe_ui::keys::install(
+    nyx_ui::keys::install(
         &window,
-        nixe_ui::keys::Common { settings: Some(settings_dialog::open), shortcuts: Some(show_shortcuts), ..Default::default() },
+        nyx_ui::keys::Common { settings: Some(settings_dialog::open), shortcuts: Some(show_shortcuts), ..Default::default() },
     );
-    window.set_icon_name(Some("io.github.design_nexus.nixe.Containers"));
+    window.set_icon_name(Some("io.github.design_nexus.nyx.Containers"));
 
     let sections = sections::all();
 
@@ -624,7 +624,7 @@ pub fn apply_test(results: Vec<crate::models::EngineStatus>) {
 
 pub fn toast(message: &str) {
     let Some(ui) = ui() else {
-        eprintln!("nixe-containers: {message}");
+        eprintln!("nyx-containers: {message}");
         return;
     };
     let overlay = ui.borrow().overlay.clone();

@@ -2,7 +2,7 @@
 
 Implemented:
 
-- GTK4 application shell with Nixe chrome, theme, compact sidebar, settings card.
+- GTK4 application shell with Nyx chrome, theme, compact sidebar, settings card.
 - Local Docker and Incus detection (socket probe + API ping).
 - Unified workload inventory (name, host, engine, type, status).
 - One remote profile: Docker over SSH, Incus over HTTPS with fingerprint pinning.

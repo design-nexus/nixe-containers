@@ -332,7 +332,7 @@ fn https_client(profile: &RemoteProfile) -> Result<(reqwest::Client, String, Arc
     let (tls, url, pin) = tls_setup(profile)?;
     let client = reqwest::Client::builder()
         .use_preconfigured_tls(tls)
-        .user_agent("nixe-containers")
+        .user_agent("nyx-containers")
         .build()
         .map_err(|e| RemoteError::Other(e.to_string()))?;
     Ok((client, url, pin))
@@ -370,7 +370,7 @@ async fn unix_envelope(
     let client: UnixHttp = Client::unix();
     let payload = body.map(|v| Bytes::from(v.to_string())).unwrap_or_default();
     let uri = hyperlocal::Uri::new(path, api_path);
-    let mut builder = Request::builder().method(method.clone()).uri(uri).header("User-Agent", "nixe-containers");
+    let mut builder = Request::builder().method(method.clone()).uri(uri).header("User-Agent", "nyx-containers");
     if !payload.is_empty() {
         builder = builder.header("Content-Type", "application/json");
     }
@@ -882,7 +882,7 @@ async fn unix_text(path: &Path, api_path: &str) -> Result<String, String> {
     let req = Request::builder()
         .method(Method::GET)
         .uri(uri)
-        .header("User-Agent", "nixe-containers")
+        .header("User-Agent", "nyx-containers")
         .body(Full::new(Bytes::new()))
         .map_err(|e| e.to_string())?;
     let res = client.request(req).await.map_err(|e| e.to_string())?;

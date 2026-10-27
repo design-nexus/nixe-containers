@@ -1,6 +1,6 @@
-//! Nixe-style building blocks: pages, groups and option rows.
+//! Nyx-style building blocks: pages, groups and option rows.
 
-pub use nixe_ui::widgets::*;
+pub use nyx_ui::widgets::*;
 
 use gtk::prelude::*;
 use sourceview5::prelude::*;
@@ -268,7 +268,7 @@ pub fn icon_button(icon: &str, tip: &str) -> gtk::Button {
 }
 
 /// GtkSourceView paints from a style scheme, not GTK CSS. Build one from the
-/// live Nixe palette so the editor matches the window.
+/// live Nyx palette so the editor matches the window.
 pub fn apply_source_scheme(buffer: &sourceview5::Buffer) {
     let palette = crate::theme::palette();
     thread_local! {
@@ -299,7 +299,7 @@ fn build_source_scheme(palette: &crate::theme::Palette) -> Option<sourceview5::S
     let highlight = gtk::glib::markup_escape_text(&palette.highlight);
     let xml = format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
-<style-scheme id="nixe-containers-yaml" name="Containers" version="1.0">
+<style-scheme id="nyx-containers-yaml" name="Containers" version="1.0">
   <style name="text" foreground="{text}" background="{bg}"/>
   <style name="line-numbers" foreground="{dim}" background="{bg}"/>
   <style name="current-line-number" foreground="{accent}" background="{bg}"/>
@@ -325,11 +325,11 @@ fn build_source_scheme(palette: &crate::theme::Palette) -> Option<sourceview5::S
 </style-scheme>
 "#
     );
-    crate::cmd::atomic_write(&directory.join("nixe-containers-yaml.xml"), xml.as_bytes()).ok()?;
+    crate::cmd::atomic_write(&directory.join("nyx-containers-yaml.xml"), xml.as_bytes()).ok()?;
     let manager = sourceview5::StyleSchemeManager::new();
     manager.append_search_path(&directory.to_string_lossy());
     manager.force_rescan();
-    manager.scheme("nixe-containers-yaml")
+    manager.scheme("nyx-containers-yaml")
 }
 
 pub fn status_pill(text: &str, kind: &str) -> gtk::Label {

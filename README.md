@@ -1,4 +1,4 @@
-# Nixe Containers
+# Nyx Containers
 
 A native GTK4 app for managing Incus and Docker on this computer and one remote
 server. No agent, no web UI.
@@ -25,7 +25,7 @@ server. No agent, no web UI.
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/design-nexus/nixe-containers/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/design-nexus/nyx-containers/main/install.sh | bash
 ```
 
 From a checkout, `./install.sh` does the same.
@@ -44,8 +44,8 @@ sudo is unavailable.
 After a group change, log out of the desktop and back in. Reloading Hyprland
 does not pick up new groups.
 
-Binary: `~/.local/bin/nixe-containers`. Application id:
-`io.github.design_nexus.nixe.Containers`.
+Binary: `~/.local/bin/nyx-containers`. Application id:
+`io.github.design_nexus.nyx.Containers`.
 
 ```
 ./uninstall.sh
@@ -57,9 +57,9 @@ Binary: `~/.local/bin/nixe-containers`. Application id:
 ## Run
 
 ```
-nixe-containers
-cargo run -p nixe-containers
-nixe-containers --section overview
+nyx-containers
+cargo run -p nyx-containers
+nyx-containers --section overview
 ```
 
 `--section` accepts `overview`, `containers`, `vms`, `stacks`, `images`,

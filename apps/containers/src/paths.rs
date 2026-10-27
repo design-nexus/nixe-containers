@@ -1,3 +1,3 @@
 //! Well-known locations.
 
-pub use nixe_core::paths::*;
+pub use nyx_core::paths::*;

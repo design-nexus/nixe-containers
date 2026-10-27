@@ -6,7 +6,7 @@ members = ["apps/containers"]
 edition = "2024"
 license = "MIT"
 authors = ["Ken Smith"]
-repository = "https://github.com/design-nexus/nixe-containers"
+repository = "https://github.com/design-nexus/nyx-containers"
 
 [profile.release]
 lto = "thin"

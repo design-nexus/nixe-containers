@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install Nixe Containers from this checkout. Installs and starts Docker and
+# Install Nyx Containers from this checkout. Installs and starts Docker and
 # Incus when they are missing; asks for a sudo password once.
 #
 #   ./install.sh                 build, install engines if needed, install the app
@@ -8,10 +8,10 @@ set -euo pipefail
 # Piped from curl (`curl -fsSL …/install.sh | bash`): no checkout here, so fetch
 # the source and run its installer from there.
 if [[ -z ${BASH_SOURCE[0]:-} ]]; then
-  command -v git >/dev/null || { echo "Git is needed to install nixe-containers." >&2; exit 1; }
+  command -v git >/dev/null || { echo "Git is needed to install nyx-containers." >&2; exit 1; }
   work=$(mktemp -d)
   trap 'rm -rf "$work"' EXIT
-  git clone -q --depth 1 https://github.com/design-nexus/nixe-containers.git "$work/src"
+  git clone -q --depth 1 https://github.com/design-nexus/nyx-containers.git "$work/src"
   bash "$work/src/install.sh" "$@"
   exit
 fi
@@ -20,7 +20,7 @@ say() { printf '\033[1m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[31m==>\033[0m %s\n' "$*" >&2; exit 1; }
 
 app_info() {
-  dir=$1 pkg="nixe-$1" bins="nixe-$1" deps="" ids=""
+  dir=$1 pkg="nyx-$1" bins="nyx-$1" deps="" ids=""
   case $1 in
     containers) ids="Containers" deps="gtk4 vte4 gtksourceview5 pkgconf gcc git curl" ;;
     *) return 1 ;;
@@ -130,8 +130,8 @@ else
 fi
 pkg-config --exists vte-2.91-gtk4 || die "vte4 is needed to build the terminal (pacman -S vte4)."
 
-say "Building nixe-containers"
-(cd "$root" && cargo build --release --locked -p nixe-containers)
+say "Building nyx-containers"
+(cd "$root" && cargo build --release --locked -p nyx-containers)
 
 bin="${HOME}/.local/bin"
 share="${XDG_DATA_HOME:-$HOME/.local/share}"
@@ -139,12 +139,12 @@ desk="$share/applications"
 icons="$share/icons/hicolor/scalable/apps"
 mkdir -p "$bin" "$desk" "$icons"
 
-src="${CARGO_TARGET_DIR:-$root/target}/release/nixe-containers"
+src="${CARGO_TARGET_DIR:-$root/target}/release/nyx-containers"
 [[ -f $src ]] || die "Build did not produce $src"
-say "Installing nixe-containers"
-install -m 755 "$src" "$bin/nixe-containers"
-install -m 644 "$root/apps/containers/data/io.github.design_nexus.nixe.Containers.desktop" "$desk/"
-install -m 644 "$root/crates/nixe-icons/apps/io.github.design_nexus.nixe.Containers.svg" "$icons/"
+say "Installing nyx-containers"
+install -m 755 "$src" "$bin/nyx-containers"
+install -m 644 "$root/apps/containers/data/io.github.design_nexus.nyx.Containers.desktop" "$desk/"
+install -m 644 "$root/crates/nyx-icons/apps/io.github.design_nexus.nyx.Containers.svg" "$icons/"
 gtk-update-icon-cache -f -t "$share/icons/hicolor" >/dev/null 2>&1 || true
 update-desktop-database "$desk" >/dev/null 2>&1 || true
-say "Installed $bin/nixe-containers"
+say "Installed $bin/nyx-containers"

@@ -2,12 +2,12 @@
   "application": "containers",
   "directory": "containers",
   "packages": [
-    "nixe-containers"
+    "nyx-containers"
   ],
   "manifest": "Cargo.toml",
   "prepare": [],
   "binaries": [
-    "nixe-containers"
+    "nyx-containers"
   ],
   "test_commands": [
     [
@@ -15,9 +15,9 @@
       "test",
       "--locked",
       "-p",
-      "nixe-containers",
+      "nyx-containers",
       "--bin",
-      "nixe-containers"
+      "nyx-containers"
     ]
   ]
 }

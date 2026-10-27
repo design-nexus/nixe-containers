@@ -5,7 +5,7 @@ use std::fmt;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-const APPLICATION: &str = "nixe-containers";
+const APPLICATION: &str = "nyx-containers";
 const ACCOUNT: &str = "remote";
 
 /// A token or passphrase. Debug output is redacted.
@@ -80,6 +80,6 @@ mod tests {
         let command = secret_command("lookup", "ssh-passphrase");
         let args: Vec<String> = command.get_args().map(|a| a.to_string_lossy().into_owned()).collect();
         assert_eq!(command.get_program(), "secret-tool");
-        assert_eq!(args, ["lookup", "application", "nixe-containers", "account", "remote", "kind", "ssh-passphrase"]);
+        assert_eq!(args, ["lookup", "application", "nyx-containers", "account", "remote", "kind", "ssh-passphrase"]);
     }
 }
