@@ -23,7 +23,14 @@ window.containers-window .app-header menubutton.bar-button > button {
   box-shadow: none;
 }
 
+/* The host switch sits in the middle of the header at control height, its track
+   2 px around the segments. */
+window.containers-window .app-header .host-segment {
+  padding: 2px;
+}
+
 window.containers-window .app-header .host-segment button.segment {
+  min-height: 26px;
   padding: 0 12px;
 }
 

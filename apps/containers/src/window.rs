@@ -280,6 +280,7 @@ fn host_segment() -> (gtk::Box, gtk::ToggleButton, gtk::ToggleButton, gtk::Toggl
     let bx = widgets::hbox(0);
     bx.add_css_class("segmented");
     bx.add_css_class("host-segment");
+    bx.set_valign(gtk::Align::Center);
     let mk = |filter: HostFilter, title: &str| {
         let b = gtk::ToggleButton::with_label(title);
         b.add_css_class("segment");
