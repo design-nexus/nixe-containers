@@ -30,9 +30,8 @@ fn cols() -> [Col; 5] {
 
 pub fn build(page: &Page) {
     page.fill();
-    let (bar, count, actions) = widgets::page_header("Stacks");
-    let create = gtk::Button::with_label("New stack");
-    create.add_css_class("suggested-action");
+    let (bar, count, actions) = widgets::page_header();
+    let create = widgets::primary_button("list-add-symbolic", "New stack");
     create.connect_clicked(|_| open_editor(None));
     actions.append(&create);
     page.body.append(&bar);

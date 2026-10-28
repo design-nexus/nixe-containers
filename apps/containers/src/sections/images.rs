@@ -26,9 +26,8 @@ fn cols() -> [Col; 5] {
 
 pub fn build(page: &Page) {
     page.fill();
-    let (bar, count, actions) = widgets::page_header("Images");
-    let pull = gtk::Button::with_label("Pull");
-    pull.add_css_class("suggested-action");
+    let (bar, count, actions) = widgets::page_header();
+    let pull = widgets::primary_button("folder-download-symbolic", "Pull an image");
     pull.connect_clicked(|_| open_pull());
     actions.append(&pull);
     page.body.append(&bar);

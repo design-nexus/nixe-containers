@@ -47,18 +47,20 @@ fn cols() -> [Col; 6] {
 }
 
 pub fn build_containers(page: &Page) {
-    build(page, Some(Kind::Container), &CONTAINERS, "Containers");
+    build(page, Some(Kind::Container), &CONTAINERS);
 }
 
 pub fn build_vms(page: &Page) {
-    build(page, Some(Kind::VirtualMachine), &VMS, "Virtual Machines");
+    build(page, Some(Kind::VirtualMachine), &VMS);
 }
 
-fn build(page: &Page, kind: Option<Kind>, slot: &'static std::thread::LocalKey<RefCell<Option<Rc<List>>>>, title: &str) {
+fn build(page: &Page, kind: Option<Kind>, slot: &'static std::thread::LocalKey<RefCell<Option<Rc<List>>>>) {
     page.fill();
-    let (bar, count, actions) = widgets::page_header(title);
-    let create = gtk::Button::with_label("Create");
-    create.add_css_class("suggested-action");
+    let (bar, count, actions) = widgets::page_header();
+    let create = widgets::primary_button(
+        "list-add-symbolic",
+        if kind == Some(Kind::VirtualMachine) { "New virtual machine" } else { "New container" },
+    );
     create.connect_clicked(move |_| open_create(kind));
     actions.append(&create);
     page.body.append(&bar);

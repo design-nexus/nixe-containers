@@ -27,9 +27,8 @@ fn cols() -> [Col; 6] {
 
 pub fn build(page: &Page) {
     page.fill();
-    let (bar, count, actions) = widgets::page_header("Networks");
-    let create = gtk::Button::with_label("Create");
-    create.add_css_class("suggested-action");
+    let (bar, count, actions) = widgets::page_header();
+    let create = widgets::primary_button("list-add-symbolic", "New network");
     create.connect_clicked(|_| open_create());
     actions.append(&create);
     page.body.append(&bar);

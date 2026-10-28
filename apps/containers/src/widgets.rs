@@ -240,22 +240,32 @@ fn attach_cell(grid: &gtk::Grid, col: &Col, child: &gtk::Widget, left: i32) {
     grid.attach(child, left, 0, 1, 1);
 }
 
-pub fn page_header(title: &str) -> (gtk::Box, gtk::Label, gtk::Box) {
+/// A page's toolbar: how many things it lists on the left, its actions on the right.
+/// No title: the window header says where you are.
+pub fn page_header() -> (gtk::Box, gtk::Label, gtk::Box) {
     let bar = hbox(12);
     bar.add_css_class("ops-header");
-    let titles = vbox(0);
-    let t = label(title, "ops-title");
-    t.set_xalign(0.0);
     let count = label("", "ops-count");
     count.set_xalign(0.0);
-    titles.append(&t);
-    titles.append(&count);
-    titles.set_hexpand(true);
-    bar.append(&titles);
-    let actions = hbox(8);
+    count.set_hexpand(true);
+    count.set_valign(gtk::Align::Center);
+    bar.append(&count);
+    let actions = hbox(4);
     actions.set_halign(gtk::Align::End);
+    actions.set_valign(gtk::Align::Center);
     bar.append(&actions);
     (bar, count, actions)
+}
+
+/// The page's main action: a solid accent square with `icon`, named by `tip`.
+pub fn primary_button(icon: &str, tip: &str) -> gtk::Button {
+    let b = gtk::Button::from_icon_name(icon);
+    b.add_css_class("suggested-action");
+    b.add_css_class("primary-button");
+    b.set_tooltip_text(Some(tip));
+    b.update_property(&[gtk::accessible::Property::Label(tip)]);
+    b.set_valign(gtk::Align::Center);
+    b
 }
 
 pub fn icon_button(icon: &str, tip: &str) -> gtk::Button {

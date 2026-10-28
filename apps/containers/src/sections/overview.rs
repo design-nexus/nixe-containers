@@ -33,7 +33,7 @@ pub fn refresh(snapshot: &Snapshot, host: HostFilter) {
     while let Some(c) = ui.body.first_child() {
         ui.body.remove(&c);
     }
-    let (bar, count, _) = widgets::page_header("Overview");
+    let (bar, count, _) = widgets::page_header();
     ui.body.append(&bar);
     let hosts: Vec<HostId> = match host {
         HostFilter::All => vec![HostId::Local, HostId::Remote],

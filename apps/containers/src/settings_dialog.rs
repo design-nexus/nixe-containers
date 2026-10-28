@@ -9,7 +9,7 @@ pub use nyx_ui::settings_card::{escape, fit, focus_search, is_open};
 
 const GROUPS: &[(&str, &str, &str)] = &[
     ("Diagnostics", "tools-check-spelling-symbolic", "Daemons, groups, packages"),
-    ("Containers window", "applications-graphics-symbolic", "Theme, glow, motion"),
+    ("Containers window", "applications-graphics-symbolic", "Theme, accent, motion"),
     ("Keyboard", "input-keyboard-symbolic", "Shortcuts"),
 ];
 

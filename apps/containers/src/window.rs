@@ -1,4 +1,6 @@
-//! The main window: host filter and manage pages in a Nyx sidebar.
+//! The main window: the header (the app and the page, the sidebar toggle; which hosts
+//! to show in the middle; what's running, search, refresh and settings at the end) and
+//! the pages in a Nyx sidebar.
 
 use crate::models::{
     DiagReport, HostFilter, HostHealth, HostId, ImageDetail, InstanceSnap, LogChunk, ResourceSample, Snapshot, WorkloadDetail,
@@ -26,6 +28,8 @@ struct Ui {
     host_local: gtk::ToggleButton,
     host_remote: gtk::ToggleButton,
     overlay: gtk::Overlay,
+    header: chrome::AppHeader,
+    /// What's running, at the header's end.
     readout: gtk::Label,
     snapshot: Snapshot,
 }
@@ -108,7 +112,7 @@ fn nav_button(icon: &str, title: &str, tooltip: &str) -> (gtk::Button, gtk::Labe
 
 fn build(app: &gtk::Application) {
     let window =
-        gtk::ApplicationWindow::builder().application(app).title("Containers").default_width(1120).default_height(800).build();
+        gtk::ApplicationWindow::builder().application(app).title("Containers").default_width(1280).default_height(800).build();
     window.add_css_class("containers-window");
     window.set_titlebar(Some(&gtk::Box::new(gtk::Orientation::Horizontal, 0)));
     nyx_ui::keys::install(
@@ -151,9 +155,6 @@ fn build(app: &gtk::Application) {
         .vexpand(true)
         .child(&list)
         .build();
-    let head = chrome::sidebar_head("Containers", Some("Search (Ctrl+F)"));
-    head.toggle.connect_clicked(|_| toggle_sidebar());
-    nav.append(&head.root);
     nav.append(&nav_scroll);
 
     let stack = gtk::Stack::new();
@@ -163,27 +164,9 @@ fn build(app: &gtk::Application) {
     stack.set_transition_type(gtk::StackTransitionType::Crossfade);
     stack.set_transition_duration(if prefs::get().reduce_motion { 0 } else { 160 });
 
-    let search = search_entry();
-    if let Some(find) = &head.search {
-        let s = search.clone();
-        find.connect_clicked(move |_| {
-            s.grab_focus();
-        });
-    }
-    let (host_bar, host_all, host_local, host_remote) = host_segment();
-    let chrome_bar = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-    chrome_bar.add_css_class("ops-chrome-bar");
-    chrome_bar.append(&host_bar);
-    let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    spacer.set_hexpand(true);
-    chrome_bar.append(&spacer);
-    search.set_hexpand(false);
-    search.set_width_chars(18);
-    chrome_bar.append(&search);
     let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     content.set_hexpand(true);
     content.add_css_class("ops-chrome");
-    content.append(&chrome_bar);
     content.append(&stack);
 
     let body = gtk::Box::new(gtk::Orientation::Horizontal, 0);
@@ -191,11 +174,31 @@ fn build(app: &gtk::Application) {
     body.append(&nav);
     body.append(&content);
 
-    let (status, readout) = status_bar();
+    // ----- Header -----
+    // The app and the page, the sidebar toggle; which hosts to show in the middle;
+    // what's running, search, refresh and Settings at the end.
+    let header = chrome::app_header(&window, "package-x-generic-symbolic", "Containers");
+    let collapse = widgets::bar_button("sidebar-show-symbolic", "Collapse the sidebar (Ctrl+B)");
+    collapse.connect_clicked(|_| toggle_sidebar());
+    header.start.append(&collapse);
+    let (host_bar, host_all, host_local, host_remote) = host_segment();
+    header.center.append(&host_bar);
+    header.end.set_spacing(4);
+    let readout = widgets::label("Looking for engines…", "header-status");
+    readout.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    readout.set_margin_end(6);
+    header.end.append(&readout);
+    let search = search_entry();
+    header.end.append(&search);
+    let refresh = widgets::bar_button("view-refresh-symbolic", "Refresh the inventory (Ctrl+R)");
+    refresh.connect_clicked(|_| worker::refresh());
+    header.end.append(&refresh);
+    header.end.append(&chrome::settings_button(settings_dialog::open));
+
     let frame = gtk::Box::new(gtk::Orientation::Vertical, 0);
     frame.add_css_class("window-frame");
+    frame.append(&header.root);
     frame.append(&body);
-    frame.append(&status);
 
     let overlay = gtk::Overlay::new();
     overlay.set_child(Some(&frame));
@@ -213,7 +216,7 @@ fn build(app: &gtk::Application) {
                 return;
             }
             nav.add_css_class("sized");
-            NARROW.with(|n| n.set(narrow));
+            set_narrow(narrow);
             apply_compact(&nav, narrow || prefs::get().sidebar_collapsed);
         }
     };
@@ -253,6 +256,7 @@ fn build(app: &gtk::Application) {
         host_local,
         host_remote,
         overlay,
+        header,
         readout,
         snapshot: Snapshot::default(),
     };
@@ -261,8 +265,10 @@ fn build(app: &gtk::Application) {
 
 fn search_entry() -> gtk::SearchEntry {
     let search = gtk::SearchEntry::new();
-    search.set_placeholder_text(Some("Search"));
-    search.add_css_class("ops-search");
+    search.set_placeholder_text(Some("Search  (Ctrl+F)"));
+    search.add_css_class("bar-search");
+    search.set_width_chars(SEARCH_WIDE);
+    search.update_property(&[gtk::accessible::Property::Label("Search the current page")]);
     search.connect_search_changed(|_| paint_lists());
     search.connect_stop_search(|e| {
         e.set_text("");
@@ -326,24 +332,21 @@ pub fn set_host(filter: HostFilter) {
     paint_lists();
 }
 
-fn status_bar() -> (gtk::Box, gtk::Label) {
-    let bar = gtk::Box::new(gtk::Orientation::Horizontal, 16);
-    bar.add_css_class("status-bar");
-    bar.append(&chrome::shortcuts_button(show_shortcuts));
-    let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    spacer.set_hexpand(true);
-    bar.append(&spacer);
-    let readout = widgets::label("Looking for engines…", "status-readout");
-    readout.set_ellipsize(gtk::pango::EllipsizeMode::Start);
-    bar.append(&readout);
-    bar.append(&chrome::gear(settings_dialog::open));
-    (bar, readout)
+/// The search's width in characters, in a full window and a narrow one.
+const SEARCH_WIDE: i32 = 18;
+const SEARCH_NARROW: i32 = 10;
+
+/// Narrow windows (a half-screen tile) get a shorter search and no running counts in
+/// the header.
+fn set_narrow(narrow: bool) {
+    NARROW.with(|n| n.set(narrow));
+    let Some(ui) = ui() else { return };
+    let u = ui.borrow();
+    u.search.set_width_chars(if narrow { SEARCH_NARROW } else { SEARCH_WIDE });
+    u.readout.set_visible(!narrow);
 }
 
 fn apply_compact(nav: &gtk::Box, compact: bool) {
-    if let Some(head) = nav.first_child().and_downcast::<gtk::Box>() {
-        chrome::set_head_compact(&head, compact);
-    }
     if compact {
         nav.add_css_class("compact");
     } else {
@@ -463,6 +466,7 @@ fn show_page(id: &str) {
         u.current = id.to_string();
         let title = u.sections.iter().find(|s| s.id == id).map(|s| s.title).unwrap_or("Containers");
         chrome::set_title(&u.window, "Containers", title);
+        u.header.set_subtitle(title);
         if id != "connections" {
             prefs::update(|p| p.last_section = id.to_string());
         }
@@ -550,7 +554,11 @@ pub fn apply_snapshot(snapshot: Snapshot) {
         let running = snapshot.running(HostFilter::All, None);
         let stopped = snapshot.stopped(HostFilter::All, None);
         let connected = snapshot.engines.iter().filter(|e| e.is_connected()).count();
-        u.readout.set_text(&format!("{running} running · {stopped} stopped · {connected} engines connected"));
+        u.readout.set_text(&format!("{running} running · {stopped} stopped"));
+        u.readout.set_tooltip_text(Some(&format!(
+            "{running} running · {stopped} stopped · {connected} {} connected",
+            if connected == 1 { "engine" } else { "engines" }
+        )));
         u.snapshot = snapshot;
         let remote_ok = crate::services::connections::remote_ready(&prefs::get().remote);
         u.host_remote.set_sensitive(remote_ok);

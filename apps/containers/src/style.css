@@ -1,56 +1,68 @@
-window.containers-window entry {
-  min-height: 32px;
-  border-radius: 6px;
-  background: alpha(@theme_bg, 0.65);
-  border: 1px solid alpha(@theme_border, 0.8);
-  box-shadow: none;
-  color: @theme_text;
-  padding: 0 8px;
-}
-
-window.containers-window entry text {
-  background: transparent;
-  color: @theme_text;
-}
-
-window.containers-window entry:focus-within {
-  border-color: @theme_accent;
-}
+/* Containers on Nyx 2.0: only Containers' own parts. One surface: tables, the
+   inspector and the pages share the window's background; spacing and cards, not
+   lines, separate them. Inputs, buttons and the header come from the shared sheets. */
 
 .ops-chrome {
   background: @theme_bg;
 }
 
-.ops-chrome-bar {
-  padding: 8px 16px;
-  border-bottom: 1px solid alpha(@theme_border, 0.8);
+/* ---------- Header ---------- */
+
+.header-status {
+  font-size: 11.5px;
+  color: @theme_dim_text;
+  font-feature-settings: "tnum";
 }
 
-.ops-search {
-  min-width: 220px;
+window.containers-window .app-header button.bar-button,
+window.containers-window .app-header menubutton.bar-button > button {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: var(--nyx-radius-small);
+  box-shadow: none;
 }
+
+window.containers-window .app-header .host-segment button.segment {
+  padding: 0 12px;
+}
+
+/* ---------- Pages ---------- */
 
 .ops-page {
-  padding: 4px 0 16px;
+  padding: 12px 8px 24px;
 }
 
 .ops-page.fill {
   padding: 0;
 }
 
+/* A page's toolbar: the count on the left, its actions on the right. */
 .ops-header {
-  padding: 14px 20px 10px;
+  min-height: 44px;
+  padding: 4px 16px 4px 20px;
 }
 
 .ops-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .ops-count {
   color: @theme_dim_text;
-  font-size: 12px;
+  font-size: 12.5px;
+  font-feature-settings: "tnum";
 }
+
+/* The page's one primary action: a solid accent square. */
+window.containers-window button.primary-button {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: var(--nyx-radius-small);
+}
+
+/* ---------- Tables ---------- */
 
 .ops-table-wrap {
   margin: 0 12px;
@@ -62,15 +74,15 @@ window.containers-window entry:focus-within {
 }
 
 .ops-thead {
-  border-bottom: 1px solid alpha(@theme_border, 0.85);
   padding: 0 4px;
 }
 
 .ops-th {
-  color: @theme_dim_text;
+  color: @theme_text_tertiary;
   font-size: 11px;
+  font-weight: 600;
   letter-spacing: 0.06em;
-  padding: 8px 10px;
+  padding: 6px 10px;
 }
 
 .ops-td {
@@ -83,7 +95,7 @@ window.containers-window entry:focus-within {
 
 .ops-table row {
   padding: 0;
-  border-bottom: 1px solid alpha(@theme_border, 0.45);
+  border-radius: var(--nyx-radius-small);
 }
 
 .ops-row:hover {
@@ -104,10 +116,24 @@ window.containers-window entry:focus-within {
   padding: 2px 8px;
 }
 
+/* Blended: the table and the inspector meet without a line (the divider still drags). */
+window.containers-window paned > separator {
+  min-width: 6px;
+  background: @theme_bg;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+}
+
+window.containers-window paned > separator:hover {
+  background: alpha(@theme_accent, 0.25);
+}
+
+/* The selected item's details, docked beside the table on the same surface. */
 .ops-inspector {
-  padding: 12px 14px;
-  border-left: 1px solid alpha(@theme_border, 0.8);
+  padding: 12px 16px;
   min-width: 300px;
+  background: @theme_bg;
 }
 
 .ops-kv {
@@ -119,6 +145,8 @@ window.containers-window entry:focus-within {
   min-width: 72px;
 }
 
+/* ---------- Overview ---------- */
+
 .overview-page {
   padding: 0 8px 24px;
 }
@@ -128,9 +156,10 @@ window.containers-window entry:focus-within {
 }
 
 .host-panel-title {
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  color: @theme_dim_text;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: @theme_text_tertiary;
 }
 
 .engine-chip {
@@ -139,35 +168,42 @@ window.containers-window entry:focus-within {
 
 .metric-card {
   padding: 12px 14px;
-  border: 1px solid alpha(@theme_border, 0.8);
   min-width: 160px;
   min-height: 128px;
+  background: @theme_card;
+  border-radius: var(--nyx-radius-card);
 }
 
 .metric-label {
-  color: @theme_dim_text;
-  font-size: 10px;
-  letter-spacing: 0.08em;
+  color: @theme_text_tertiary;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
 }
 
 .metric-value {
-  font-size: 18px;
+  font-size: 22px;
+  font-weight: 600;
+  font-feature-settings: "tnum";
 }
 
 .metric-card progressbar trough {
   min-height: 4px;
-  background: alpha(@theme_muted, 0.8);
+  border-radius: 999px;
+  background: @track;
 }
 
 .metric-card progressbar progress {
   min-height: 4px;
+  border-radius: 999px;
   background: @theme_accent;
 }
 
 .running-head {
-  color: @theme_dim_text;
-  font-size: 10px;
-  letter-spacing: 0.08em;
+  color: @theme_text_tertiary;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   padding: 8px 0 4px;
 }
 
@@ -179,17 +215,19 @@ window.containers-window entry:focus-within {
   min-width: 8px;
   min-height: 8px;
   border-radius: 8px;
-  background: @theme_muted;
+  background: @theme_text_tertiary;
   margin-right: 4px;
 }
 
 .status-dot.ok {
-  background: @theme_accent;
+  background: @theme_success;
 }
 
 .status-dot.danger {
   background: @theme_danger;
 }
+
+/* ---------- Logs, terminal and the Compose editor: code stays monospace ---------- */
 
 .logs-view,
 .session-term,
@@ -201,8 +239,6 @@ window.containers-window entry:focus-within {
 
 .compose-editor {
   font-size: 12px;
-  background: @theme_bg;
-  color: @theme_text;
 }
 
 .compose-editor text {
