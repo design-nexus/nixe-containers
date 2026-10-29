@@ -3,17 +3,32 @@
 use crate::sections::settings;
 use crate::{widgets, window};
 use gtk::prelude::*;
-use nyx_ui::settings_card::{self, Spec};
+use nyx_ui::settings_card::{self, About, Spec, Standard};
 
 pub use nyx_ui::settings_card::{escape, fit, focus_search, is_open};
 
-const GROUPS: &[(&str, &str, &str)] = &[
-    ("Diagnostics", "tools-check-spelling-symbolic", "Daemons, groups, packages"),
-    ("Containers window", "applications-graphics-symbolic", "Theme, accent, motion"),
-    ("Keyboard", "input-keyboard-symbolic", "Shortcuts"),
-];
+const GROUPS: &[(&str, &str, &str)] = &[("Diagnostics", "tools-check-spelling-symbolic", "Daemons, groups, packages")];
 
-const SPEC: Spec = Spec { groups: GROUPS, search_text: None };
+const SPEC: Spec = Spec {
+    groups: GROUPS,
+    search_text: None,
+    standard: Some(Standard {
+        app: "containers",
+        about: About {
+            name: "Containers",
+            icon: "io.github.design_nexus.nyx.Containers",
+            version: env!("CARGO_PKG_VERSION"),
+            description: "Manage Incus and Docker containers and virtual machines.",
+            licence: "MIT",
+            website: "https://github.com/design-nexus/nyx-containers",
+            issues: "https://github.com/design-nexus/nyx-containers/issues",
+            credits: &[],
+        },
+        shortcuts: window::SHORTCUTS,
+        reduce_motion: || crate::prefs::get().reduce_motion,
+        set_reduce_motion: |on| crate::prefs::update(|p| p.reduce_motion = on),
+    }),
+};
 
 pub fn open() {
     open_to(None);
