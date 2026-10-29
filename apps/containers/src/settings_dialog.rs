@@ -7,7 +7,7 @@ use nyx_ui::settings_card::{self, About, Spec, Standard};
 
 pub use nyx_ui::settings_card::{escape, fit, focus_search, is_open};
 
-const GROUPS: &[(&str, &str, &str)] = &[("Diagnostics", "tools-check-spelling-symbolic", "Daemons, groups, packages")];
+const GROUPS: &[(&str, &str, &str)] = &[("Refresh", "view-refresh-symbolic", "Inventory update interval"), ("Remote", "network-server-symbolic", "Server and connection details"), ("Diagnostics", "tools-check-spelling-symbolic", "Daemons, groups, packages")];
 
 const SPEC: Spec = Spec {
     groups: GROUPS,

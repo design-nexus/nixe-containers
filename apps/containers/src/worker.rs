@@ -55,7 +55,8 @@ pub fn start() {
         runtime.block_on(async move {
             let live = Arc::new(Mutex::new(Live { logs: HashMap::new(), terms: HashMap::new(), term_stop: HashMap::new() }));
             let mut sampler = host::Sampler::default();
-            let mut tick = tokio::time::interval(std::time::Duration::from_secs(8));
+            let mut interval = refresh_seconds();
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(interval));
             tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             let mut health = tokio::time::interval(std::time::Duration::from_secs(2));
             health.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
@@ -104,7 +105,15 @@ pub fn start() {
                         }
                     }
                     _ = tick.tick() => refresh_now().await,
-                    _ = health.tick() => sample_now(&mut sampler).await,
+                    _ = health.tick() => {
+                        sample_now(&mut sampler).await;
+                        let next = refresh_seconds();
+                        if next != interval {
+                            interval = next;
+                            tick = tokio::time::interval_at(tokio::time::Instant::now() + std::time::Duration::from_secs(next), std::time::Duration::from_secs(next));
+                            tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+                        }
+                    },
                 }
             }
         });
@@ -441,4 +450,10 @@ fn current_remote() -> RemoteProfile {
         .and_then(|text| toml::from_str::<crate::prefs::Prefs>(&text).ok())
         .map(|p| p.remote)
         .unwrap_or_default()
+}
+
+fn refresh_seconds() -> u64 {
+    std::fs::read_to_string(crate::paths::prefs_file()).ok()
+        .and_then(|text| toml::from_str::<crate::prefs::Prefs>(&text).ok())
+        .map(|p| p.refresh_seconds.clamp(2, 30)).unwrap_or(8)
 }

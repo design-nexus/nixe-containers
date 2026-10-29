@@ -63,6 +63,7 @@ pub struct Prefs {
     pub sidebar_collapsed: bool,
     pub last_section: String,
     pub remote: RemoteProfile,
+    pub refresh_seconds: u64,
 }
 
 impl Default for Prefs {
@@ -75,6 +76,7 @@ impl Default for Prefs {
             sidebar_collapsed: false,
             last_section: "overview".into(),
             remote: RemoteProfile::default(),
+            refresh_seconds: 8,
         }
     }
 }
