@@ -37,6 +37,7 @@ pub fn open_logs(host: HostId, engine: Engine, name: &str) {
     let seq = next_seq();
     let title = format!("Logs · {name} · {}", window::host_name(host));
     let (dialog, card) = widgets::dialog(&title, 720);
+    crate::dialog_dismissal::add(&dialog, &card, "Close");
     dialog.set_default_height(520);
 
     let bar = widgets::hbox(8);
@@ -127,6 +128,7 @@ pub fn open_stack_logs(host: HostId, engine: Engine, project: &str, names: Vec<S
     let seq = next_seq();
     let title = format!("Logs · {project} · {}", window::host_name(host));
     let (dialog, card) = widgets::dialog(&title, 720);
+    crate::dialog_dismissal::add(&dialog, &card, "Close");
     dialog.set_default_height(520);
     let bar = widgets::hbox(8);
     let query = gtk::SearchEntry::new();
@@ -232,6 +234,7 @@ pub fn open_term(host: HostId, engine: Engine, name: &str, kind: TermKind, runni
     };
     let title = format!("{kind_label} · {name} · {}", window::host_name(host));
     let (dialog, card) = widgets::dialog(&title, 760);
+    crate::dialog_dismissal::add(&dialog, &card, "Close");
     dialog.set_default_height(480);
     let hint = widgets::label(
         match kind {
